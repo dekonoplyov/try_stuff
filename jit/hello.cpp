@@ -1,9 +1,9 @@
 #include <array>
 #include <iostream>
 #include <string>
-#include <vector>
-#include <unistd.h>
 #include <sys/mman.h>
+#include <unistd.h>
+#include <vector>
 
 /*
 Output of
@@ -40,25 +40,24 @@ std::array<uint8_t, 4> getEncodedMessageSize(size_t messageSize)
         static_cast<uint8_t>(messageSize & 0xff),
         static_cast<uint8_t>((messageSize & 0xff00) >> 8),
         static_cast<uint8_t>((messageSize & 0xff0000) >> 16),
-        static_cast<uint8_t>((messageSize & 0xff000000) >> 24)
-    };
+        static_cast<uint8_t>((messageSize & 0xff000000) >> 24)};
 }
 
 std::vector<uint8_t> createMachineCode(const std::string& message)
 {
     const auto encodedMessageSize = getEncodedMessageSize(message.size());
     std::vector<uint8_t> machineCode{
-        #ifdef __linux__
-        0x48, 0xc7, 0xc0, 0x01, 0x00, 0x00, 0x00,           // Store the "write" system call number 0x01 for Linux
-        #elif __APPLE__
-        0x48, 0xc7, 0xc0, 0x04, 0x00, 0x00, 0x02,           // Store the "write" system call number 0x02000004 for macOS
-        #endif
-        0x48, 0xc7, 0xc7, 0x01, 0x00, 0x00, 0x00,           // Store stdin file descriptor 0x01
-        0x48, 0x8d, 0x35, 0x0a, 0x00, 0x00, 0x00,           // Store the location of the string to write (3 instructions from the current instruction pointer)
+#ifdef __linux__
+        0x48, 0xc7, 0xc0, 0x01, 0x00, 0x00, 0x00, // Store the "write" system call number 0x01 for Linux
+#elif __APPLE__
+        0x48, 0xc7, 0xc0, 0x04, 0x00, 0x00, 0x02, // Store the "write" system call number 0x02000004 for macOS
+#endif
+        0x48, 0xc7, 0xc7, 0x01, 0x00, 0x00, 0x00, // Store stdin file descriptor 0x01
+        0x48, 0x8d, 0x35, 0x0a, 0x00, 0x00, 0x00, // Store the location of the string to write (3 instructions from the current instruction pointer)
         // Store the length of the string
         0x48, 0xc7, 0xc2, encodedMessageSize[0], encodedMessageSize[1], encodedMessageSize[2], encodedMessageSize[3],
-        0x0f, 0x05,                                         // Execute the system call
-        0xc3                                                // return instruction
+        0x0f, 0x05, // Execute the system call
+        0xc3 // return instruction
     };
 
     for (auto c : message) {
@@ -116,7 +115,7 @@ void callMachineCode(const std::vector<uint8_t>& machineCode)
 
     void (*func)();
     // Cast the address of our generated code to a function pointer and call the function
-    func = (void (*)()) mem;
+    func = (void (*)())mem;
     func();
 
     // Release the mmaped memory
