@@ -14,15 +14,18 @@ Display* dis;
 int screen;
 Window win;
 GC gc;
+int xi_opcode;
 
 /* here are our X routines declared! */
 void init_x();
 void close_x();
 void redraw();
+void setupXI2();
 
 int main()
 {
     XEvent event; /* the XEvent declaration !!! */
+    XGenericEventCookie* cookie = reinterpret_cast<XGenericEventCookie*>(&event);
     KeySym key; /* a dealie-bob to handle KeyPress Events */
     char text[255]; /* a char buffer for KeyPress Events */
 
@@ -38,21 +41,6 @@ int main()
 		   Note:  only events we set the mask for are detected!
 		*/
         XNextEvent(dis, &event);
-
-        if (event.xcookie.data == nullptr) {
-            continue;
-        }
-
-        XIDeviceEvent* xiev = static_cast<XIDeviceEvent*>(event.xcookie.data);
-
-        std::cout << event.type << std::endl;
-
-        for (int i = 0; i < dev_count; ++i) {
-            std::cout << xiev->deviceid << "\n";
-            if (dev_info[i].id == xiev->deviceid) {
-                std::cout << (dev_info[i].type == touchpad_atom ? "touch" : "not touch") << std::endl;
-            }
-        }
 
         if (event.type == Expose && event.xexpose.count == 0) {
             /* the window was exposed redraw it! */
@@ -76,31 +64,87 @@ int main()
             XSetForeground(dis, gc, rand() % event.xbutton.x % 255);
             XDrawString(dis, win, gc, x, y, text, strlen(text));
         }
+
+        if (XGetEventData(dis, cookie))
+            switch (cookie->evtype) {
+            case XI_TouchBegin:
+            case XI_TouchUpdate:
+            case XI_TouchEnd: {
+                auto xiev = static_cast<XIDeviceEvent*>(cookie->data);
+                XDrawString(dis, win, gc, xiev->event_x, xiev->event_y, "O", 1);
+                break;
+            }
+            default: {
+                std::cout << event.xgeneric.evtype << "\n";
+            }
+            }
     }
 
-    std::cout << 1 << std::endl;
     return 0;
 }
 
 void init_x()
 {
     /* get the colors black and white (see section for details) */
-    unsigned long black, white;
-
     dis = XOpenDisplay((char*)0);
     screen = DefaultScreen(dis);
-    black = BlackPixel(dis, screen),
-    white = WhitePixel(dis, screen);
+    unsigned long black = BlackPixel(dis, screen);
+    unsigned long white = WhitePixel(dis, screen);
+
     win = XCreateSimpleWindow(dis, DefaultRootWindow(dis), 0, 0,
         300, 300, 5, black, white);
     XSetStandardProperties(dis, win, "Howdy", "Hi", None, NULL, 0, NULL);
-    XSelectInput(dis, win, ExposureMask | ButtonPressMask | KeyPressMask);
+    XSelectInput(dis, win, ExposureMask | ButtonPressMask | KeyPressMask | PointerMotionMask);
+
+    setupXI2();
+
     gc = XCreateGC(dis, win, 0, 0);
     XSetBackground(dis, gc, white);
     XSetForeground(dis, gc, black);
     XClearWindow(dis, win);
     XMapRaised(dis, win);
+
+    /* check XInput extension */
+    {
+        int ev;
+        int err;
+
+        if (!XQueryExtension(dis, "XInputExtension", &xi_opcode, &ev, &err)) {
+            printf("X Input extension not available.\n");
+            exit(1);
+        }
+    }
 };
+
+void setupXI2()
+{
+    unsigned char mask[XIMaskLen(XI_LASTEVENT)];
+    memset(mask, 0, sizeof(mask));
+
+    // XISetMask(mask, XI_Enter);
+    // XISetMask(mask, XI_Leave);
+    // XISetMask(mask, XI_FocusIn);
+    // XISetMask(mask, XI_FocusOut);
+
+    XISetMask(mask, XI_TouchBegin);
+    XISetMask(mask, XI_TouchUpdate);
+    XISetMask(mask, XI_TouchEnd);
+
+    // XISetMask(mask, XI_ButtonPress);
+    // XISetMask(mask, XI_ButtonRelease);
+    // XISetMask(mask, XI_Motion);
+
+    // XISetMask(mask, XI_HierarchyChanged);
+    // XISetMask(mask, XI_DeviceChanged);
+
+    XIEventMask evmask;
+    evmask.deviceid = XIAllDevices;
+    evmask.mask_len = sizeof(mask);
+    evmask.mask = mask;
+    XISelectEvents(dis, win, &evmask, 1);
+    // can skip this?
+    XFlush(dis);
+}
 
 void close_x()
 {
