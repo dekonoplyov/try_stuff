@@ -31,9 +31,10 @@ int main()
 
     init_x();
 
-    Atom touchpad_atom = XInternAtom(dis, XI_TOUCHPAD, False);
-    int dev_count = 0;
-    XDeviceInfo* dev_info = XListInputDevices(dis, &dev_count);
+    // Selecting propper devices
+    // Atom touchpad_atom = XInternAtom(dis, XI_TOUCHPAD, False);
+    // int dev_count = 0;
+    // XDeviceInfo* dev_info = XListInputDevices(dis, &dev_count);
 
     /* look for events forever... */
     while (1) {
@@ -65,7 +66,7 @@ int main()
             XDrawString(dis, win, gc, x, y, text, strlen(text));
         }
 
-        if (XGetEventData(dis, cookie))
+        if (XGetEventData(dis, cookie) && event.type == GenericEvent)
             switch (cookie->evtype) {
             case XI_TouchBegin:
             case XI_TouchUpdate:
@@ -118,7 +119,8 @@ void init_x()
 
 void setupXI2()
 {
-    unsigned char mask[XIMaskLen(XI_LASTEVENT)];
+    // unsigned char mask[XIMaskLen(XI_LASTEVENT)];
+    unsigned char mask[3];
     memset(mask, 0, sizeof(mask));
 
     // XISetMask(mask, XI_Enter);
