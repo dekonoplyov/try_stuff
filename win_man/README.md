@@ -1,9 +1,17 @@
 # WIN_MAN
 Simple windows manager project to understand xlib internals 
 
-Compile
+Build
 ```
-clang++ main.cpp -L/usr/include/X11 -lX11 -o win_man
+mkdir build
+cd build
+cmake ..
+make
+```
+
+Run
+```
+./run.sh
 ```
 
 Requirements  
