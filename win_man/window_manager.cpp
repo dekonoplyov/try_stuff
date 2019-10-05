@@ -4,6 +4,8 @@
 
 namespace win_man {
 
+bool WindowManager::wm_detected_ = false;
+
 std::unique_ptr<WindowManager> WindowManager::create()
 {
     auto display = XOpenDisplay(nullptr);
