@@ -11,9 +11,9 @@ std::unique_ptr<WindowManager> WindowManager::create()
     auto display = XOpenDisplay(nullptr);
     if (display == nullptr) {
         LOG(ERROR) << "Failed to open XDisplay: " << XDisplayName(nullptr);
+        return nullptr;
     }
-    return nullptr;
-    // return std::make_unique<WindowManager>(display);
+    return std::make_unique<WindowManager>(display);
 }
 
 WindowManager::WindowManager(Display* d)

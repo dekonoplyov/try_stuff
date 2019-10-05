@@ -13,6 +13,9 @@ public:
     // establish connection to XServer and create WM instance
     static std::unique_ptr<WindowManager> create();
 
+    // TODO make it private, fix unique_ptr behaviour
+    WindowManager(Display* d);
+
     // general error handler
     static int onXError(Display* d, XErrorEvent* e);
     // error hander to determine whether another window manager is
@@ -26,9 +29,6 @@ public:
 
     // enter the main event loop
     void run();
-
-private:
-    WindowManager(Display* d);
 
 private:
     static bool wm_detected_;
