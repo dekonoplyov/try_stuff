@@ -5,6 +5,7 @@ extern "C" {
 }
 
 #include <memory>
+#include <unordered_map>
 
 namespace win_man {
 
@@ -31,10 +32,19 @@ public:
     void run();
 
 private:
+    void onConfigureRequest(const XConfigureRequestEvent& e);
+    void onMapRequest(const XMapRequestEvent& e);
+
+    void frame(Window w);
+
+private:
     static bool wm_detected_;
-    
+
     Display* display_;
     const Window root_;
+
+    // top-level windows to their frame windows.
+    std::unordered_map<Window, Window> clients_;
 };
 
 } // namespace win_man

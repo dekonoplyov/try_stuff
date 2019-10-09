@@ -53,15 +53,15 @@ void WindowManager::run()
 
         switch (e.type) {
         case CreateNotify:
-            /* code */
+            // TODO implement
+            // OnCreateNotify(e.xcreatewindow);
             break;
-        case DestroyNotify:
-            /* code */
+        case ConfigureRequest:
+            onConfigureRequest(e.xconfigurerequest);
             break;
-        case ReparentNotify:
-            /* code */
+        case MapRequest:
+            onMapRequest(e.xmaprequest);
             break;
-
         default:
             LOG(WARNING) << "Ignored event";
             break;
@@ -89,6 +89,103 @@ int WindowManager::onXError(Display* d, XErrorEvent* e)
     (void)d;
     // Print error
     return 0;
+}
+
+void WindowManager::onConfigureRequest(const XConfigureRequestEvent& e)
+{
+    XWindowChanges changes;
+    changes.x = e.x;
+    changes.y = e.y;
+    changes.width = e.width;
+    changes.height = e.height;
+    changes.border_width = e.border_width;
+    changes.sibling = e.above;
+    changes.stack_mode = e.detail;
+    XConfigureWindow(display_, e.window, e.value_mask, &changes);
+    LOG(INFO) << "Resize " << e.window << " to " << e.width << " " << e.height;
+}
+
+void WindowManager::onMapRequest(const XMapRequestEvent& e)
+{
+    // Frame or re-frame window.
+    frame(e.window);
+    // Actually map window.
+    XMapWindow(display_, e.window);
+}
+
+void WindowManager::frame(Window w)
+{
+    // Visual properties of the frame to create.
+    const unsigned int BORDER_WIDTH = 3;
+    const unsigned long BORDER_COLOR = 0xff0000;
+    const unsigned long BG_COLOR = 0x0000ff;
+
+    XWindowAttributes window_attrs;
+    CHECK(XGetWindowAttributes(display_, w, &window_attrs));
+
+    const Window frame = XCreateSimpleWindow(display_, root_,
+        window_attrs.x, window_attrs.y,
+        window_attrs.width, window_attrs.height,
+        BORDER_WIDTH, BORDER_COLOR,
+        BG_COLOR);
+
+    // Select events on frame
+    XSelectInput(display_, frame,
+        SubstructureRedirectMask | SubstructureNotifyMask);
+
+    // Add client to save set, so that it will be restored and kept alive if we crash.
+    XAddToSaveSet(display_, w);
+
+    // Reparent client window.
+    XReparentWindow(display_, w, frame,
+        0, 0); // Offset of client window within frame.
+
+    // Map frame.
+    XMapWindow(display_, frame);
+    // Save frame handle.
+    clients_[w] = frame;
+
+    // Grab universal window management actions on client window.
+    // Move windows with alt + left button.
+    XGrabButton(display_,
+        Button1, Mod1Mask,
+        w,
+        false,
+        ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
+        GrabModeAsync, GrabModeAsync,
+        None, None);
+    // Resize windows with alt + right button.
+    XGrabButton(
+        display_,
+        Button3,
+        Mod1Mask,
+        w,
+        false,
+        ButtonPressMask | ButtonReleaseMask | ButtonMotionMask,
+        GrabModeAsync,
+        GrabModeAsync,
+        None,
+        None);
+    // Kill windows with alt + f4.
+    // XGrabKey(
+    //     display_,
+    //     XKeysymToKeycode(display_, XK_F4),
+    //     Mod1Mask,
+    //     w,
+    //     false,
+    //     GrabModeAsync,
+    //     GrabModeAsync);
+    // Switch windows with alt + tab.
+    // XGrabKey(
+    //     display_,
+    //     XKeysymToKeycode(display_, XK_Tab),
+    //     Mod1Mask,
+    //     w,
+    //     false,
+    //     GrabModeAsync,
+    //     GrabModeAsync);
+
+    LOG(INFO) << "Framed window " << w << " [" << frame << "]";
 }
 
 } // namespace win_man
