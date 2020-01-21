@@ -37,6 +37,7 @@ int main()
     // XDeviceInfo* dev_info = XListInputDevices(dis, &dev_count);
 
     /* look for events forever... */
+    std::cout << dis << std::endl;
     while (1) {
         /* get the next event and stuff it into our event variable.
 		   Note:  only events we set the mask for are detected!
@@ -65,6 +66,9 @@ int main()
             XSetForeground(dis, gc, rand() % event.xbutton.x % 255);
             XDrawString(dis, win, gc, x, y, text, strlen(text));
         }
+        if (event.type == GenericEvent) {
+            std::cout << "some shit\n";
+        }
 
         if (XGetEventData(dis, cookie) && event.type == GenericEvent)
             switch (cookie->evtype) {
@@ -88,6 +92,9 @@ void init_x()
 {
     /* get the colors black and white (see section for details) */
     dis = XOpenDisplay((char*)0);
+    // int maj, minor;
+    // XIQueryVersion(dis, &maj, &minor);
+    // std::cout << maj << " " << minor << std::endl;
     screen = DefaultScreen(dis);
     unsigned long black = BlackPixel(dis, screen);
     unsigned long white = WhitePixel(dis, screen);
@@ -132,8 +139,8 @@ void setupXI2()
     XISetMask(mask, XI_TouchUpdate);
     XISetMask(mask, XI_TouchEnd);
 
-    // XISetMask(mask, XI_ButtonPress);
-    // XISetMask(mask, XI_ButtonRelease);
+    XISetMask(mask, XI_ButtonPress);
+    XISetMask(mask, XI_ButtonRelease);
     // XISetMask(mask, XI_Motion);
 
     // XISetMask(mask, XI_HierarchyChanged);
